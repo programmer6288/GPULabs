@@ -57,56 +57,106 @@ void matrixMultiplication(float* A, float* B, float* D, int w)
 // Implement this kernel function
 // A & B are addresses on the host for input matrices, C is the address on the host for output matrix
 // matrixWidth is the width of matrices for which matrix multiplication is being performed
-__global__ void MatrixMulCUDA(float* C, float* A, float* B, int matrixWidth) 
+__global__ void MatrixMulCUDA(float* C, float* A, float* B, int matrixWidth)
 {
-    
-    // Allocate shared memory to be used by a block
-    __shared__ float A_tile[TILE_WIDTH][TILE_WIDTH];
-    __shared__ float B_tile[TILE_WIDTH][TILE_WIDTH];
-    __shared__ float C_tile[TILE_WIDTH][TILE_WIDTH];
-    
-    int blockNum = blockIdx.x + blockIdx.y * gridDim.y;
-    int threadNum = threadIdx.x + threadIdx.y * blockDim.y;
-    
-    for (int i = 0; i < matrixWidth / TILE_WIDTH; i++) {
-        // Block specific    
-        int A_start_row = blockNum * TILE_WIDTH;
-        int A_start_col = 0;
-        
-        int B_start_row = 0;
-        int B_start_col = blockNum * TILE_WIDTH;
-        
-        // Thread specific
-        int A_row = A_start_row + (threadNum / TILE_WIDTH);
-        int A_col = A_start_col;
+    int bx = blockIdx.x;
+    int by = blockIdx.y;
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
 
-        int B_row = B_start_row;
-        int B_col = B_start_col + (threadNum % TILE_WIDTH);
-        
-        int A_tile_row = A_row - A_start_row;
-        int A_tile_col = A_col - A_start_col;
+    // Determine row and column in C
+    int row = by * TILE_WIDTH + ty;
+    int col = bx * TILE_WIDTH + tx;
 
-        int B_tile_row = B_row - B_start_row;
-        int B_tile_col = B_col - B_start_col;
+    // Initialize Cvalue for accumulating the result
+    float Cvalue = 0.0;
 
-        // Load values into the shared memory
-        
-        A_tile[A_tile_row][B_tile_col] = A[A_row][B_col];
-        B_tile[A_tile_row][B_tile_col] = B[A_row][B_col];
+    // Loop over tiles in the row of A and the column of B
+    for (int m = 0; m < ceil(matrixWidth / (float)TILE_WIDTH); ++m) {
+        // Allocate shared memory for A_tile and B_tile
+        __shared__ float A_tile[TILE_WIDTH][TILE_WIDTH];
+        __shared__ float B_tile[TILE_WIDTH][TILE_WIDTH];
 
-        // Sync threads to make sure entire tile is initialized before next step
+        int aIndex = row * matrixWidth + m * TILE_WIDTH + tx;
+        int bIndex = (m * TILE_WIDTH + ty) * matrixWidth + col;
+
+        // Load the tiles into shared memory
+        if ((m * TILE_WIDTH + tx) < matrixWidth && row < matrixWidth)
+            A_tile[ty][tx] = A[aIndex];
+        else
+            A_tile[ty][tx] = 0.0;
+
+        if ((m * TILE_WIDTH + ty) < matrixWidth && col < matrixWidth)
+            B_tile[ty][tx] = B[bIndex];
+        else
+            B_tile[ty][tx] = 0.0;
+
         __syncthreads();
 
-        // Perform multiplication and accumulate results into thread-local memory
-        
-        for (int i = 0; i < TILE_WIDTH; i++) {
-            C_tile[A_tile_row][B_tile_col] += A_tile[A_tile_row][A_tile_col + i] * B_tile[B_tile_row + i][B_tile_col]; 
+        // Compute the dot product of the row vector in A_tile and the column vector in B_tile
+        for (int k = 0; k < TILE_WIDTH; ++k) {
+            Cvalue += A_tile[ty][k] * B_tile[k][tx];
         }
 
-       // Sync threads to make sure entire tile is calculated before next step 
-        __syncthreads();
+        __syncthreads();  // Ensure all computations are finished before the next load
+    }
+
+    // Write the computed value to the C matrix
+    if (row < matrixWidth && col < matrixWidth) {
+        C[row * matrixWidth + col] = Cvalue;
     }
 }
+
+// __global__ void MatrixMulCUDA(float* C, float* A, float* B, int matrixWidth) 
+// {
+    
+//     // Allocate shared memory to be used by a block
+//     __shared__ float A_tile[TILE_WIDTH][TILE_WIDTH];
+//     __shared__ float B_tile[TILE_WIDTH][TILE_WIDTH];
+//     __shared__ float C_tile[TILE_WIDTH][TILE_WIDTH];
+    
+//     int blockNum = blockIdx.x + blockIdx.y * gridDim.y;
+//     int threadNum = threadIdx.x + threadIdx.y * blockDim.y;
+    
+//     for (int i = 0; i < matrixWidth / TILE_WIDTH; i++) {
+//         // Block specific    
+//         int A_start_row = blockNum * TILE_WIDTH;
+//         int A_start_col = 0;
+        
+//         int B_start_row = 0;
+//         int B_start_col = blockNum * TILE_WIDTH;
+        
+//         // Thread specific
+//         int A_row = A_start_row + (threadNum / TILE_WIDTH);
+//         int A_col = A_start_col;
+
+//         int B_row = B_start_row;
+//         int B_col = B_start_col + (threadNum % TILE_WIDTH);
+        
+//         int A_tile_row = A_row - A_start_row;
+//         int A_tile_col = A_col - A_start_col;
+
+//         int B_tile_row = B_row - B_start_row;
+//         int B_tile_col = B_col - B_start_col;
+
+//         // Load values into the shared memory
+        
+//         A_tile[A_tile_row][B_tile_col] = A[A_row][B_col];
+//         B_tile[A_tile_row][B_tile_col] = B[A_row][B_col];
+
+//         // Sync threads to make sure entire tile is initialized before next step
+//         __syncthreads();
+
+//         // Perform multiplication and accumulate results into thread-local memory
+        
+//         for (int i = 0; i < TILE_WIDTH; i++) {
+//             C_tile[A_tile_row][B_tile_col] += A_tile[A_tile_row][A_tile_col + i] * B_tile[B_tile_row + i][B_tile_col]; 
+//         }
+
+//        // Sync threads to make sure entire tile is calculated before next step 
+//         __syncthreads();
+//     }
+// }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Do not modify code below this line
