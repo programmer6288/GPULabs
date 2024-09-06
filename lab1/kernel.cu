@@ -72,9 +72,9 @@ __global__ void MatrixMulCUDA(float* C, float* A, float* B, int matrixWidth)
 
     float C_accum = 0.0;
 
-    for (int m = 0; m < matrixWidth / TILE_WIDTH; m++) {
-        int a_index = row * matrixWidth + m * TILE_WIDTH + tx;
-        int b_index = (m * TILE_WIDTH + ty) * matrixWidth + col;
+    for (int i = 0; i < matrixWidth / TILE_WIDTH; i++) {
+        int a_index = row * matrixWidth + i * TILE_WIDTH + tx;
+        int b_index = (i * TILE_WIDTH + ty) * matrixWidth + col;
 
         A_tile[ty][tx] = A[a_index];
         B_tile[ty][tx] = B[b_index];
