@@ -69,42 +69,32 @@ __global__ void MatrixMulCUDA(float* C, float* A, float* B, int matrixWidth)
     int col = bx * TILE_WIDTH + tx;
 
     // Initialize Cvalue for accumulating the result
-    float Cvalue = 0.0;
+    float C_accum = 0.0;
+	// Allocate shared memory for A_tile and B_tile
+	__shared__ float A_tile[TILE_WIDTH][TILE_WIDTH];
+	__shared__ float B_tile[TILE_WIDTH][TILE_WIDTH];
 
     // Loop over tiles in the row of A and the column of B
     for (int m = 0; m < ceil(matrixWidth / (float)TILE_WIDTH); ++m) {
-        // Allocate shared memory for A_tile and B_tile
-        __shared__ float A_tile[TILE_WIDTH][TILE_WIDTH];
-        __shared__ float B_tile[TILE_WIDTH][TILE_WIDTH];
 
         int aIndex = row * matrixWidth + m * TILE_WIDTH + tx;
         int bIndex = (m * TILE_WIDTH + ty) * matrixWidth + col;
 
         // Load the tiles into shared memory
-        if ((m * TILE_WIDTH + tx) < matrixWidth && row < matrixWidth)
-            A_tile[ty][tx] = A[aIndex];
-        else
-            A_tile[ty][tx] = 0.0;
-
-        if ((m * TILE_WIDTH + ty) < matrixWidth && col < matrixWidth)
-            B_tile[ty][tx] = B[bIndex];
-        else
-            B_tile[ty][tx] = 0.0;
-
+    A_tile[ty][tx] = A[aIndex];
+    B_tile[ty][tx] = B[bIndex];
+	// Ensure the whole tile is loaded before the computation is started.
         __syncthreads();
 
         // Compute the dot product of the row vector in A_tile and the column vector in B_tile
         for (int k = 0; k < TILE_WIDTH; ++k) {
-            Cvalue += A_tile[ty][k] * B_tile[k][tx];
+            C_accum += A_tile[ty][k] * B_tile[k][tx];
         }
 
         __syncthreads();  // Ensure all computations are finished before the next load
     }
 
-    // Write the computed value to the C matrix
-    if (row < matrixWidth && col < matrixWidth) {
-        C[row * matrixWidth + col] = Cvalue;
-    }
+        C[row * matrixWidth + col] = C_accum;
 }
 
 // __global__ void MatrixMulCUDA(float* C, float* A, float* B, int matrixWidth) 
