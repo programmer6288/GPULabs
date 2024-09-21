@@ -6,11 +6,8 @@
 #include <algorithm>
 
 
-__global__ void bitonic_sort(int *gpuArr, int i, int j, int size) {
+__global__ void bitonic_sort(int *gpuArr, int i, int j) {
     int k = threadIdx.x + blockDim.x * blockIdx.x;
-    if (k >= size) {
-        return;
-    }
     int xor_idx = k ^ (1 << j);
     if (xor_idx > k) {
         if (((1 << i) & k) == 0) {
@@ -64,8 +61,9 @@ int main(int argc, char* argv[]) {
     // your code goes here .......
     int modSize = 1 << ((int) ceil(log2(size)));
     int *gpuArr;
-    cudaMalloc(&gpuArr, size * sizeof(int));
+    cudaMalloc(&gpuArr, modSize * sizeof(int));
     cudaMemcpy(gpuArr, arrCpu, size * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemset(gpuArr + size, 0, (modSize - size) * sizeof(int));
     
     
 
@@ -81,9 +79,9 @@ int main(int argc, char* argv[]) {
 
     // your code goes here .......
 
-    for (int i = 1; i <= log2(size); i++) {
+    for (int i = 1; i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
-            bitonic_sort<<<(modSize + 1023)/ 1024, 1024>>>(gpuArr, i, j, size);
+            bitonic_sort<<<(modSize + 1023)/ 1024, 1024>>>(gpuArr, i, j);
         }
     }
 
@@ -98,7 +96,7 @@ int main(int argc, char* argv[]) {
     // ======================================================================
 
     // your code goes here .......
-    cudaMemcpy(arrSortedGpu, gpuArr, size * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
     cudaFree(gpuArr);
 
     cudaEventRecord(stop);
