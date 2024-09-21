@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <algorithm>
 
-#define BUFSIZE 1024
+#define BUFSIZE 512
 
 __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
     __shared__ int buf[BUFSIZE];
@@ -30,13 +30,21 @@ __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
                         int temp = buf[k];
                         buf[k] = buf[xor_idx];
                         buf[xor_idx] = temp;
-                    }
+                    } else if (buf[k] < buf[xor_idx] && !even) {
+                        int temp = buf[k];
+                        buf[k] = buf[xor_idx];
+                        buf[xor_idx] = temp;
+		    }
                 } else {
-                    if (buf[k] < buf[xor_idx] && !even) {
+                    if (buf[k] < buf[xor_idx] && even) {
                         int temp = buf[k];
                         buf[k] = buf[xor_idx];
                         buf[xor_idx] = temp;                
-                    }
+                    } else if (buf[k] > buf[xor_idx] && !even) {
+                        int temp = buf[k];
+                        buf[k] = buf[xor_idx];
+                        buf[xor_idx] = temp;                
+		    }
                 }
             }
             __syncthreads();
@@ -123,7 +131,7 @@ int main(int argc, char* argv[]) {
     
     bitonic_sort_shared<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE>>>(gpuArr, (int) log2(std::min(modSize, BUFSIZE)));
 //    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
-//    for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
+ //   for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
 
     for (int i = (int) (log2(BUFSIZE) + 1); i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
@@ -202,4 +210,5 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
 
