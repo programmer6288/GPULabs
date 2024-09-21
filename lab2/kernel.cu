@@ -5,21 +5,22 @@
 #include <cuda_runtime.h>
 #include <algorithm>
 
-#define BUFSIZE 1024
+#define BUFSIZE 8
 
 __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
-    extern __shared__ int buf[];
+    __shared__ int buf[BUFSIZE];
     int k = threadIdx.x;
     int idx = blockIdx.x * blockDim.x + k;
-    if (k < 1 << logsize) {
+    if (k < (1 << logsize)) {
         buf[k] = gpuArr[idx];
     } else {
-        buf[k] = MAX_INT;
+        buf[k] = INT_MAX;
     }
     __syncthreads();
 
     for (int i = 1; i <= logsize; i++) {
         for (int j = i - 1; j >= 0; j--) {
+		for (int m = 0; m < BUFSIZE; m++) printf("buf[%d] = %d\n", m, buf[m]);
             int xor_idx = k ^ (1 << j);
             if (xor_idx > k) {
                 if (((1 << i) & k) == 0) {
@@ -40,7 +41,7 @@ __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
 
         }
     }
-    if (k < 1 << logsize) {
+    if (k < (1 << logsize)) {
         gpuArr[idx] = buf[k];
     }
     
@@ -118,7 +119,7 @@ int main(int argc, char* argv[]) {
 
     // your code goes here .......
     
-    bitonic_sort_shared<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE, BUFSIZE * sizeof(int)>>>(gpuArr, (int) log2(BUFSIZE));
+    bitonic_sort_shared<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE>>>(gpuArr, (int) log2(size));
 
     for (int i = (int) log2(BUFSIZE) + 1; i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
