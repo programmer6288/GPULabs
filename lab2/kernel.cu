@@ -25,27 +25,34 @@ __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
         for (int j = i - 1; j >= 0; j--) {
             int xor_idx = k ^ (1 << j);
             if (xor_idx > k) {
-                if (((1 << i) & k) == 0) {
-                    if (buf[k] > buf[xor_idx] && even) {
-                        int temp = buf[k];
-                        buf[k] = buf[xor_idx];
-                        buf[xor_idx] = temp;
-                    } else if (buf[k] < buf[xor_idx] && !even) {
-                        int temp = buf[k];
-                        buf[k] = buf[xor_idx];
-                        buf[xor_idx] = temp;
-		    }
-                } else {
-                    if (buf[k] < buf[xor_idx] && even) {
-                        int temp = buf[k];
-                        buf[k] = buf[xor_idx];
-                        buf[xor_idx] = temp;                
-                    } else if (buf[k] > buf[xor_idx] && !even) {
-                        int temp = buf[k];
-                        buf[k] = buf[xor_idx];
-                        buf[xor_idx] = temp;                
-		    }
-                }
+                bool swap = ((((1 << i) & k) == 0) && ((buf[k] > buf[xor_idx] && even) || buf[k] < buf[xor_idx] && !even)) 
+                || ((((1 << i) & k) != 0) && ((buf[k] < buf[xor_idx] && even) || (buf[k] > buf[xor_idx] && !even)));
+                if (swap) {
+                    int temp = buf[k];
+                    buf[k] = buf[xor_idx];
+                    buf[xor_idx] = temp;
+                } 
+                // if (((1 << i) & k) == 0) {
+                //     if (buf[k] > buf[xor_idx] && even) {
+                //         int temp = buf[k];
+                //         buf[k] = buf[xor_idx];
+                //         buf[xor_idx] = temp;
+                //     } else if (buf[k] < buf[xor_idx] && !even) {
+                //         int temp = buf[k];
+                //         buf[k] = buf[xor_idx];
+                //         buf[xor_idx] = temp;
+		        //     }
+                // } else {
+                //     if (buf[k] < buf[xor_idx] && even) {
+                //         int temp = buf[k];
+                //         buf[k] = buf[xor_idx];
+                //         buf[xor_idx] = temp;                
+                //     } else if (buf[k] > buf[xor_idx] && !even) {
+                //         int temp = buf[k];
+                //         buf[k] = buf[xor_idx];
+                //         buf[xor_idx] = temp;                
+		        //     }
+                // }
             }
             __syncthreads();
 
