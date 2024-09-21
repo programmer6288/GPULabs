@@ -6,14 +6,14 @@
 #include <algorithm>
 
 
-__global__ void bitonic_sort_shared(int *gpuArr) {
+__global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
     __shared__ int buf[];
     int k = threadIdx.x;
     int idx = blockIdx.x * blockDim.x + k;
     buf[k] = gpuArr[idx];
     __syncthreads();
 
-    for (int i = 1; i <= log2(blockDim.x); i++) {
+    for (int i = 1; i <= logsize; i++) {
         for (int j = i - 1; j >= 0; j--) {
             int xor_idx = k ^ (1 << j);
             if (xor_idx > k) {
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
 
     // your code goes here .......
     
-    bitonic_sort_shared<<<(modSize + 1023)/1024, 1024, 1024 * sizeof(int)>>>(gpuArr);
+    bitonic_sort_shared<<<(modSize + 1023)/1024, 1024, 1024 * sizeof(int)>>>(gpuArr, 10);
 
     for (int i = 2 * 1024; i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
