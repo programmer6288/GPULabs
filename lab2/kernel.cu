@@ -6,8 +6,11 @@
 #include <algorithm>
 
 
-__global__ void bitonic_sort(int *gpuArr, int i, int j) {
+__global__ void bitonic_sort(int *gpuArr, int i, int j, int size) {
     int k = threadIdx.x + blockDim.x * blockIdx.x;
+    if (k >= size) {
+        return;
+    }
     int xor_idx = k ^ (1 << j);
     if (xor_idx > k) {
         if (((1 << i) & k) == 0) {
@@ -59,10 +62,11 @@ int main(int argc, char* argv[]) {
     // ======================================================================
 
     // your code goes here .......
-    // int modSize = 1 << ceil(log2(size));
+    int modSize = 1 << ((int) ceil(log2(size)));
     int *gpuArr;
     cudaMalloc(&gpuArr, size * sizeof(int));
     cudaMemcpy(gpuArr, arrCpu, size * sizeof(int), cudaMemcpyHostToDevice);
+    
     
 
     cudaEventRecord(stop);
@@ -79,7 +83,7 @@ int main(int argc, char* argv[]) {
 
     for (int i = 1; i <= log2(size); i++) {
         for (int j = i - 1; j >= 0; j--) {
-            bitonic_sort<<<(size + 1023)/ 1024, 1024>>>(gpuArr, i, j);
+            bitonic_sort<<<(modSize + 1023)/ 1024, 1024>>>(gpuArr, i, j, size);
         }
     }
 
