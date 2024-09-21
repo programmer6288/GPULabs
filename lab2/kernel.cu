@@ -11,6 +11,9 @@ __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
     __shared__ int buf[BUFSIZE];
     int k = threadIdx.x;
     int idx = blockIdx.x * blockDim.x + k;
+
+    bool even = (blockIdx.x % 2 == 0);
+
     if (k < (1 << logsize)) {
         buf[k] = gpuArr[idx];
     } else {
@@ -23,13 +26,13 @@ __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
             int xor_idx = k ^ (1 << j);
             if (xor_idx > k) {
                 if (((1 << i) & k) == 0) {
-                    if (buf[k] > buf[xor_idx]) {
+                    if (buf[k] > buf[xor_idx] && even) {
                         int temp = buf[k];
                         buf[k] = buf[xor_idx];
                         buf[xor_idx] = temp;
                     }
                 } else {
-                    if (buf[k] < buf[xor_idx]) {
+                    if (buf[k] < buf[xor_idx] && !even) {
                         int temp = buf[k];
                         buf[k] = buf[xor_idx];
                         buf[xor_idx] = temp;                
@@ -122,7 +125,7 @@ int main(int argc, char* argv[]) {
 //    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
 //    for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
 
-    for (int i = (int) (log2(BUFSIZE)); i <= log2(modSize); i++) {
+    for (int i = (int) (log2(BUFSIZE) + 1); i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
             bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE>>>(gpuArr, i, j);
 //	    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
