@@ -5,78 +5,23 @@
 #include <cuda_runtime.h>
 #include <algorithm>
 
-#define SHARED_MEM_SIZE 1024
 
-// CUDA kernel to perform bitonic sort in shared memory for smaller subsequences
-__global__ void bitonicSortShared(int *data, int numElements, int sharedSize) {
-    extern __shared__ int sharedData[];
-
-    unsigned int idx = threadIdx.x + blockIdx.x * blockDim.x;
-    unsigned int tid = threadIdx.x;
-
-    // Load data from global memory to shared memory
-    if (idx < numElements) {
-        sharedData[tid] = data[idx];
-    }
-    __syncthreads();
-
-    // Perform bitonic sort in shared memory
-    for (int k = 2; k <= sharedSize; k <<= 1) {
-        for (int j = k >> 1; j > 0; j >>= 1) {
-            unsigned int ixj = tid ^ j;
-            if (ixj > tid) {
-                if ((tid & k) == 0) {
-                    // Ascending order
-                    if (sharedData[tid] > sharedData[ixj]) {
-                        int temp = sharedData[tid];
-                        sharedData[tid] = sharedData[ixj];
-                        sharedData[ixj] = temp;
-                    }
-                } else {
-                    // Descending order
-                    if (sharedData[tid] < sharedData[ixj]) {
-                        int temp = sharedData[tid];
-                        sharedData[tid] = sharedData[ixj];
-                        sharedData[ixj] = temp;
-                    }
-                }
+__global__ void bitonic_sort(int *gpuArr, int i, int j) {
+    int k = threadIdx.x + blockDim.x * blockIdx.x;
+    int xor_idx = k ^ (1 << j);
+    if (xor_idx > k) {
+        if ((1 << i) & k == 0) {
+            if (gpuArr[k] > gpuArr[xor_idx]) {
+                int temp = gpuArr[k];
+                gpuArr[k] = gpuArr[xor_idx];
+                gpuArr[xor_idx] = temp;
             }
-            __syncthreads();
-        }
-    }
-
-    // Write the sorted subsequence back to global memory
-    if (idx < numElements) {
-        data[idx] = sharedData[tid];
-    }
-}
-
-// CUDA kernel to perform global memory bitonic merge (subsequences already sorted)
-__global__ void bitonicMergeGlobal(int *data, int sortedSubseqSize, int numElements) {
-    unsigned int idx = threadIdx.x + blockDim.x * blockIdx.x;
-
-    // Start merging from sorted subsequence size
-    for (int k = sortedSubseqSize * 2; k <= numElements; k <<= 1) {
-        for (int j = k >> 1; j > 0; j >>= 1) {
-            unsigned int ixj = idx ^ j;
-            if (ixj > idx && ixj < numElements) {
-                if ((idx & k) == 0) {
-                    // Ascending order
-                    if (data[idx] > data[ixj]) {
-                        int temp = data[idx];
-                        data[idx] = data[ixj];
-                        data[ixj] = temp;
-                    }
-                } else {
-                    // Descending order
-                    if (data[idx] < data[ixj]) {
-                        int temp = data[idx];
-                        data[idx] = data[ixj];
-                        data[ixj] = temp;
-                    }
-                }
+        } else {
+            if (gpuArr[k] < gpuArr[xor_idx]) {
+                int temp = gpuArr[k];
+                gpuArr[k] = gpuArr[xor_idx];
+                gpuArr[xor_idx] = temp;                
             }
-            __syncthreads();
         }
     }
 }
@@ -132,26 +77,11 @@ int main(int argc, char* argv[]) {
 
     // your code goes here .......
 
-    int numElements = size;
-    // Calculate block size
-    int sharedSize = SHARED_MEM_SIZE;
-    int numBlocks = numElements / sharedSize;
-    
-    // Launch the shared memory bitonic sort for smaller subsequences
-    if (numBlocks > 0) {
-        dim3 blocks(numBlocks);
-        dim3 threads(sharedSize);
-        bitonicSortShared<<<blocks, threads, sharedSize * sizeof(int)>>>(gpuArr, numElements, sharedSize);
-        cudaDeviceSynchronize();
+    for (int i = 1; i <= log2(size); i++) {
+        for (int j = i - 1; j >= 0; j++) {
+            bitonicSort<<<size / 1024, 1024>>>(gpuArr, i, j);
+        }
     }
-
-    // Launch the global memory kernel to merge the results (only once)
-    dim3 blocksGlobal(numElements / 1024);
-    dim3 threadsGlobal(1024);
-    
-    // The sortedSubseqSize is the size of subsequences already sorted by shared memory
-    bitonicMergeGlobal<<<blocksGlobal, threadsGlobal>>>(gpuArr, sharedSize, numElements);
-    cudaDeviceSynchronize();
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
