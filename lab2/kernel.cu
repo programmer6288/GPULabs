@@ -10,7 +10,7 @@ __global__ void bitonic_sort(int *gpuArr, int i, int j) {
     int k = threadIdx.x + blockDim.x * blockIdx.x;
     int xor_idx = k ^ (1 << j);
     if (xor_idx > k) {
-        if ((1 << i) & k == 0) {
+        if (((1 << i) & k) == 0) {
             if (gpuArr[k] > gpuArr[xor_idx]) {
                 int temp = gpuArr[k];
                 gpuArr[k] = gpuArr[xor_idx];
@@ -78,12 +78,8 @@ int main(int argc, char* argv[]) {
     // your code goes here .......
 
     for (int i = 1; i <= log2(size); i++) {
-        for (int j = i - 1; j >= 0; j++) {
-            bitonic_sort<<<size / 1024, 1024>>>(gpuArr, i, j);
-            cudaMemcpy(arrSortedGpu, gpuArr, size * sizeof(int), cudaMemcpyDeviceToHost);
-            for (int i = 0; i < size; i++) {
-                printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
-            }
+        for (int j = i - 1; j >= 0; j--) {
+            bitonic_sort<<<(size + 1023)/ 1024, 1024>>>(gpuArr, i, j);
         }
     }
 
@@ -114,9 +110,6 @@ int main(int argc, char* argv[]) {
     cpuTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
     cpuTime = cpuTime / 1000;
 
-    for (int i = 0; i < size; i++) {
-        printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
-    }
     int match = 1;
     for (int i = 0; i < size; i++) {
         if (arrSortedGpu[i] != arrCpu[i]) {
