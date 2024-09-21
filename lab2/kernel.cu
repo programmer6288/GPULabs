@@ -6,6 +6,38 @@
 #include <algorithm>
 
 
+__global__ void bitonic_sort_shared(int *gpuArr) {
+    __shared__ int buf[];
+    int k = threadIdx.x;
+    int idx = blockIdx.x * blockDim.x + k;
+    buf[k] = gpuArr[idx];
+    __syncthreads();
+
+    for (int i = 1; i <= log2(blockDim.x); i++) {
+        for (int j = i - 1; j >= 0; j--) {
+            int xor_idx = k ^ (1 << j);
+            if (xor_idx > k) {
+                if (((1 << i) & k) == 0) {
+                    if (buf[k] > buf[xor_idx]) {
+                        int temp = buf[k];
+                        buf[k] = buf[xor_idx];
+                        buf[xor_idx] = temp;
+                    }
+                } else {
+                    if (buf[k] < buf[xor_idx]) {
+                        int temp = buf[k];
+                        buf[k] = buf[xor_idx];
+                        buf[xor_idx] = temp;                
+                    }
+                }
+            }
+            __syncthreads();
+
+        }
+    }
+    gpuArr[idx] = buf[k];
+    
+}
 __global__ void bitonic_sort(int *gpuArr, int i, int j) {
     int k = threadIdx.x + blockDim.x * blockIdx.x;
     int xor_idx = k ^ (1 << j);
@@ -78,8 +110,10 @@ int main(int argc, char* argv[]) {
     // ======================================================================
 
     // your code goes here .......
+    
+    bitonic_sort_shared<<<(modSize + 1023)/1024, 1024, 1024 * sizeof(int)>>>(gpuArr);
 
-    for (int i = 1; i <= log2(modSize); i++) {
+    for (int i = 2 * 1024; i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
             bitonic_sort<<<(modSize + 1023)/ 1024, 1024>>>(gpuArr, i, j);
         }
