@@ -79,7 +79,11 @@ int main(int argc, char* argv[]) {
 
     for (int i = 1; i <= log2(size); i++) {
         for (int j = i - 1; j >= 0; j++) {
-            bitonicSort<<<size / 1024, 1024>>>(gpuArr, i, j);
+            bitonic_sort<<<size / 1024, 1024>>>(gpuArr, i, j);
+            cudaMemcpy(arrSortedGpu, gpuArr, size * sizeof(int), cudaMemcpyDeviceToHost);
+            for (int i = 0; i < size; i++) {
+                printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
+            }
         }
     }
 
@@ -110,6 +114,9 @@ int main(int argc, char* argv[]) {
     cpuTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
     cpuTime = cpuTime / 1000;
 
+    for (int i = 0; i < size; i++) {
+        printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
+    }
     int match = 1;
     for (int i = 0; i < size; i++) {
         if (arrSortedGpu[i] != arrCpu[i]) {
