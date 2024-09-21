@@ -8,7 +8,7 @@
 #define BUFSIZE 1024
 
 __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
-    __shared__ int buf[];
+    extern __shared__ int buf[];
     int k = threadIdx.x;
     int idx = blockIdx.x * blockDim.x + k;
     if (k < 1 << logsize) {
@@ -118,11 +118,11 @@ int main(int argc, char* argv[]) {
 
     // your code goes here .......
     
-    bitonic_sort_shared<<<(modSize + BUFSIZE - 1)/, BUFSIZE, BUFSIZE * sizeof(int)>>>(gpuArr, (int) log2(BUFSIZE));
+    bitonic_sort_shared<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE, BUFSIZE * sizeof(int)>>>(gpuArr, (int) log2(BUFSIZE));
 
     for (int i = (int) log2(BUFSIZE) + 1; i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
-            bitonic_sort<<<(modSize + BUFSIZE - 1)/ BUFSIZE, BUFSIZE>>>(gpuArr, i, j);
+            bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE>>>(gpuArr, i, j);
         }
     }
 
