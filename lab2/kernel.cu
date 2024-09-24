@@ -97,12 +97,12 @@ int main(int argc, char* argv[]) {
     // arCpu contains the input random array
     // arrSortedGpu should contain the sorted array copied from GPU to CPU
     // ======================================================================
-    int *arrCpu;
-    cudaMallocHost(&arrCpu, size * sizeof(int));
-    int *arrSortedGpu;
-    cudaMallocHost(&arrSortedGpu, size * sizeof(int));
-    // int* arrCpu = (int*)malloc(size * sizeof(int));
-    // int* arrSortedGpu = (int*)malloc(size * sizeof(int));
+//    int *arrCpu;
+ //   cudaMallocHost(&arrCpu, size * sizeof(int));
+  //  int *arrSortedGpu;
+   // cudaMallocHost(&arrSortedGpu, size * sizeof(int));
+     int* arrCpu = (int*)malloc(size * sizeof(int));
+     int* arrSortedGpu = (int*)malloc(size * sizeof(int));
 
     for (int i = 0; i < size; i++) {
         arrCpu[i] = rand() % 1000;
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
 
     for (int i = (int) (log2(BUFSIZE) + 1); i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
-            bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE>>>(gpuArr, i, j);
+            bitonic_sort<<<(modSize + 1023) / 1024, 1024>>>(gpuArr, i, j);
 //	    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
 //	    for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
         }
@@ -186,9 +186,9 @@ int main(int argc, char* argv[]) {
             break;
         }
     }
-
-    free(arrCpu);
-    free(arrSortedGpu);
+	free(arrCpu); free(arrSortedGpu);
+    //cudaFreeHost(arrCpu);
+    //cudaFreeHost(arrSortedGpu);
 
     if (match)
         printf("\033[1;32mFUNCTIONAL SUCCESS\n\033[0m");
