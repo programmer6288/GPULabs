@@ -64,10 +64,10 @@ __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
     
 }
 __global__ void bitonic_sort(int *gpuArr, int i, int j) {
-    int idx = threadIdx.x + 2 * blockDim.x * blockIdx.x;
-    int swap_idx = idx ^ (1 << j);
-    int k = std::min(idx, swap_idx);
-    int xor_idx = std::max(idx, swap_idx);
+    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+    
+    int k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
+    int xor_idx = k ^ (1 << j);
 
     if (((1 << i) & k) == 0) {
         if (gpuArr[k] > gpuArr[xor_idx]) {
@@ -83,8 +83,6 @@ __global__ void bitonic_sort(int *gpuArr, int i, int j) {
         }
     }
     
-
-
 
     // int k = threadIdx.x + blockDim.x * blockIdx.x;
     // int xor_idx = k ^ (1 << j);
@@ -120,11 +118,11 @@ int main(int argc, char* argv[]) {
     // arrSortedGpu should contain the sorted array copied from GPU to CPU
     // ======================================================================
     int *arrCpu;
-    cudaMallocHost(&arrCpu, size * sizeof(int));
+    // cudaMallocHost(&arrCpu, size * sizeof(int));
     int *arrSortedGpu;
-    cudaMallocHost(&arrSortedGpu, size * sizeof(int));
-    // int* arrCpu = (int*)malloc(size * sizeof(int));
-    // int* arrSortedGpu = (int*)malloc(size * sizeof(int));
+    // cudaMallocHost(&arrSortedGpu, size * sizeof(int));
+    int* arrCpu = (int*)malloc(size * sizeof(int));
+    int* arrSortedGpu = (int*)malloc(size * sizeof(int));
 
     for (int i = 0; i < size; i++) {
         arrCpu[i] = rand() % 1000;
