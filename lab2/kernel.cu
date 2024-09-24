@@ -117,9 +117,9 @@ int main(int argc, char* argv[]) {
     // arCpu contains the input random array
     // arrSortedGpu should contain the sorted array copied from GPU to CPU
     // ======================================================================
-    int *arrCpu;
+    // int *arrCpu;
     // cudaMallocHost(&arrCpu, size * sizeof(int));
-    int *arrSortedGpu;
+    // int *arrSortedGpu;
     // cudaMallocHost(&arrSortedGpu, size * sizeof(int));
     int* arrCpu = (int*)malloc(size * sizeof(int));
     int* arrSortedGpu = (int*)malloc(size * sizeof(int));
