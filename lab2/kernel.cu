@@ -64,23 +64,45 @@ __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
     
 }
 __global__ void bitonic_sort(int *gpuArr, int i, int j) {
-    int k = threadIdx.x + blockDim.x * blockIdx.x;
-    int xor_idx = k ^ (1 << j);
-    if (xor_idx > k) {
-        if (((1 << i) & k) == 0) {
-            if (gpuArr[k] > gpuArr[xor_idx]) {
-                int temp = gpuArr[k];
-                gpuArr[k] = gpuArr[xor_idx];
-                gpuArr[xor_idx] = temp;
-            }
-        } else {
-            if (gpuArr[k] < gpuArr[xor_idx]) {
-                int temp = gpuArr[k];
-                gpuArr[k] = gpuArr[xor_idx];
-                gpuArr[xor_idx] = temp;                
-            }
+    int idx = threadIdx.x + 2 * blockDim.x * blockIdx.x;
+    int swap_idx = idx ^ (1 << j);
+    int k = std::min(idx, swap_idx);
+    int xor_idx = std::max(idx, swap_idx);
+
+    if (((1 << i) & k) == 0) {
+        if (gpuArr[k] > gpuArr[xor_idx]) {
+            int temp = gpuArr[k];
+            gpuArr[k] = gpuArr[xor_idx];
+            gpuArr[xor_idx] = temp;
+        }
+    } else {
+        if (gpuArr[k] < gpuArr[xor_idx]) {
+            int temp = gpuArr[k];
+            gpuArr[k] = gpuArr[xor_idx];
+            gpuArr[xor_idx] = temp;                
         }
     }
+    
+
+
+
+    // int k = threadIdx.x + blockDim.x * blockIdx.x;
+    // int xor_idx = k ^ (1 << j);
+    // if (xor_idx > k) {
+    //     if (((1 << i) & k) == 0) {
+    //         if (gpuArr[k] > gpuArr[xor_idx]) {
+    //             int temp = gpuArr[k];
+    //             gpuArr[k] = gpuArr[xor_idx];
+    //             gpuArr[xor_idx] = temp;
+    //         }
+    //     } else {
+    //         if (gpuArr[k] < gpuArr[xor_idx]) {
+    //             int temp = gpuArr[k];
+    //             gpuArr[k] = gpuArr[xor_idx];
+    //             gpuArr[xor_idx] = temp;                
+    //         }
+    //     }
+    // }
 }
 
 int main(int argc, char* argv[]) {
@@ -146,7 +168,7 @@ int main(int argc, char* argv[]) {
 
     for (int i = (int) (log2(BUFSIZE) + 1); i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
-            bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE>>>(gpuArr, i, j);
+            bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
 //	    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
 //	    for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
         }
