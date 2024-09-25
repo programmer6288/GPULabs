@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <algorithm>
 
-#define BUFSIZE 512
+#define BUFSIZE 2048
 
 __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
     __shared__ int buf[BUFSIZE];
@@ -67,6 +67,11 @@ __global__ void bitonic_sort_shared_merge(int *gpuArr, int i, int j) {
     __shared__ int buf[BUFSIZE];
     int idx = threadIdx.x + blockDim.x * blockIdx.x;
     
+int org_k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
+int org_xor_idx = org_k ^ (1 << j);
+
+int org_buf_idx = org_k % BUFSIZE;
+int org_buf_xor_idx = org_xor_idx % BUFSIZE;
     int org = j;
     for (; j >= 0; j--) {
         int k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
@@ -99,8 +104,8 @@ __global__ void bitonic_sort_shared_merge(int *gpuArr, int i, int j) {
 
     }
     
-    gpuArr[k] = buf[buf_idx];
-    gpuArr[xor_idx] = buf[buf_xor_idx];
+    gpuArr[org_k] = buf[org_buf_idx];
+    gpuArr[org_xor_idx] = buf[org_buf_xor_idx];
     
 
     
@@ -211,6 +216,7 @@ int main(int argc, char* argv[]) {
         for (int j = i - 1; j >= 0; j--) {
 	    if ((1 << j) < BUFSIZE) {
 		bitonic_sort_shared_merge<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
+		j = -1;
 	    } else {
 		bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
 	    }
