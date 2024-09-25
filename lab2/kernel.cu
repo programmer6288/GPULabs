@@ -42,12 +42,13 @@
 // }
 
         
-__global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
+__global__ void bitonic_sort_shared(int *gpuArr, int logsize, int stage) {
     __shared__ int buf[BUFSIZE];
     int k = threadIdx.x;
     int idx = blockIdx.x * blockDim.x + k;
 
-    bool even = (blockIdx.x % 2 == 0);
+    bool even = ((blockIdx.x / (1 << (stage - logsize))) % 2) == 0;
+    // bool even = (blockIdx.x % 2 == 0);
 
     if (k < (1 << logsize)) {
         buf[k] = gpuArr[idx];
@@ -238,10 +239,10 @@ int main(int argc, char* argv[]) {
 
     int logsize = (int) (log2(BUFSIZE));
     bitonic_sort_shared<<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize);
-    for (int i = 2 * logsize; i < log2(modSize); i++) {
+    for (int i = logsize + 1; i < log2(modSize); i++) {
         for (int j = i - 1; j >= logsize; j--) {
             if (j == logsize) {
-                bitonic_sort_shared<<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize); 
+                bitonic_sort_shared<<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize, i); 
             } else {
                 bitonic_sort<<<(modSize) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
             }
