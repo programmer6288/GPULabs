@@ -239,7 +239,7 @@ int main(int argc, char* argv[]) {
 
     int logsize = (int) (log2(BUFSIZE));
     bitonic_sort_shared<<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize, logsize);
-    for (int i = logsize + 1; i < log2(modSize); i++) {
+    for (int i = logsize + 1; i <= log2(modSize); i++) {
         for (int j = i - 1; j >= logsize; j--) {
             if (j == logsize) {
                 bitonic_sort_shared<<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize, i); 
