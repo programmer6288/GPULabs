@@ -67,24 +67,20 @@ __global__ void bitonic_sort_shared_merge(int *gpuArr, int i, int j) {
     __shared__ int buf[BUFSIZE];
     int idx = threadIdx.x + blockDim.x * blockIdx.x;
     
-int org_k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
-int org_xor_idx = org_k ^ (1 << j);
+    int org_k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
+    int org_xor_idx = org_k ^ (1 << j);
 
-int org_buf_idx = org_k % BUFSIZE;
-int org_buf_xor_idx = org_xor_idx % BUFSIZE;
-    int org = j;
+    int org_buf_idx = org_k % BUFSIZE;
+    int org_buf_xor_idx = org_xor_idx % BUFSIZE;
+    buf[org_buf_idx] = gpuArr[org_k];
+    buf[org_buf_xor_idx] = gpuArr[org_xor_idx];
+    __syncthreads();
     for (; j >= 0; j--) {
         int k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
         int xor_idx = k ^ (1 << j);
         
         int buf_idx = k % BUFSIZE;
         int buf_xor_idx = xor_idx % BUFSIZE;
-        if (j == org) {
-            buf[buf_idx] = gpuArr[k];
-            buf[buf_xor_idx] = gpuArr[xor_idx];
-
-            __syncthreads();
-        }    
 
 
         if (((1 << i) & k) == 0) {
@@ -215,10 +211,10 @@ int main(int argc, char* argv[]) {
     for (int i = /*((int) log2(BUFSIZE)) + */1; i <= log2(modSize); i++) {
         for (int j = i - 1; j >= 0; j--) {
 	    if ((1 << j) < BUFSIZE) {
-		bitonic_sort_shared_merge<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
-		j = -1;
+            bitonic_sort_shared_merge<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
+            j = -1;
 	    } else {
-		bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
+            bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
 	    }
 //	    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
 //	    for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
