@@ -211,6 +211,7 @@ int main(int argc, char* argv[]) {
         for (int j = i - 1; j >= 0; j--) {
 	    if ((1 << j) < BUFSIZE) {
 		bitonic_sort_shared_merge<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
+        j = -1;
 	    } else {
 		bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
 	    }
