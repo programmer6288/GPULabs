@@ -236,7 +236,7 @@ int main(int argc, char* argv[]) {
 //    cudaMemcpy(arrSortedGpu, gpuArr + (modSize - size), size * sizeof(int), cudaMemcpyDeviceToHost);
  //   for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
 
-    int logsize = log2(BUFSIZE);
+    int logsize = (int) log2(BUFSIZE);
     bitonic_sort_shared<<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize);
     for (int i = 2 * logsize; i < log2(modSize); i++) {
         for (int j = i - 1; j >= logsize; j--) {
