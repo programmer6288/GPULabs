@@ -7,39 +7,39 @@
 
 #define BUFSIZE 512
 
-__global__ void shared(int *gpuArr, int logsize) {
-    __shared__ int buf[BUFSIZE];
+// __global__ void shared(int *gpuArr, int logsize) {
+//     __shared__ int buf[BUFSIZE];
 
-    int idx = threadIdx.x + blockDim.x * blockIdx.x;
+//     int idx = threadIdx.x + blockDim.x * blockIdx.x;
 
-    int k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
-    int xor_idx = k ^ (1 << j);
+//     int k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
+//     int xor_idx = k ^ (1 << j);
     
-    int buf_idx = k % BUFSIZE;
-    int buf_xor_idx = xor_idx % BUFSIZE;
+//     int buf_idx = k % BUFSIZE;
+//     int buf_xor_idx = xor_idx % BUFSIZE;
     
-    buf[buf_idx] = gpuArr[k];
-    buf[buf_xor_idx] = gpuArr[xor_idx];
+//     buf[buf_idx] = gpuArr[k];
+//     buf[buf_xor_idx] = gpuArr[xor_idx];
 
-    __syncthreads();
+//     __syncthreads();
 
-    for (int i = 1; i <= logsize; i++) {
-        for (int j = i - 1; j >= 0; j--) {
-            bool swap = ((((1 << i) & k) == 0) && ((buf[buf_idx] > buf[buf_xor_idx] && even) || buf[buf_idx] < buf[buf_xor_idx] && !even)) 
-            || ((((1 << i) & k) != 0) && ((buf[buf_idx] < buf[buf_xor_idx] && even) || (buf[buf_idx] > buf[buf_xor_idx] && !even)));
-            if (swap) {
-                int temp = buf[buf_idx];
-                buf[buf_idx] = buf[buf_xor_idx];
-                buf[buf_xor_idx] = temp;
-            } 
-        }
-    }
+//     for (int i = 1; i <= logsize; i++) {
+//         for (int j = i - 1; j >= 0; j--) {
+//             bool swap = ((((1 << i) & k) == 0) && ((buf[buf_idx] > buf[buf_xor_idx] && even) || buf[buf_idx] < buf[buf_xor_idx] && !even)) 
+//             || ((((1 << i) & k) != 0) && ((buf[buf_idx] < buf[buf_xor_idx] && even) || (buf[buf_idx] > buf[buf_xor_idx] && !even)));
+//             if (swap) {
+//                 int temp = buf[buf_idx];
+//                 buf[buf_idx] = buf[buf_xor_idx];
+//                 buf[buf_xor_idx] = temp;
+//             } 
+//         }
+//     }
 
-    __syncthreads();
+//     __syncthreads();
     
-    gpuArr[k] = buf[buf_idx];
-    gpuArr[xor_idx] = buf[buf_xor_idx];
-}
+//     gpuArr[k] = buf[buf_idx];
+//     gpuArr[xor_idx] = buf[buf_xor_idx];
+// }
 
         
 __global__ void bitonic_sort_shared(int *gpuArr, int logsize) {
@@ -237,11 +237,11 @@ int main(int argc, char* argv[]) {
  //   for (int i = 0; i < size; i++) printf("arr[%d] = %d\n", i, arrSortedGpu[i]);
 
     int logsize = log2(BUFSIZE);
-    shared<<<modSize / BUFSIZE, BUFSIZE / 2>>>(gpuArr, logsize);
+    bitonic_sort_shared<<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize);
     for (int i = 2 * logsize; i < log2(modSize); i++) {
         for (int j = i - 1; j >= logsize; j--) {
             if (j == logsize) {
-                shared<<modSize / BUFSIZE, BUFSIZE / 2>>>(gpuArr, logsize); 
+                bitonic_sort_shared<<modSize / BUFSIZE, BUFSIZE>>>(gpuArr, logsize); 
             } else {
                 bitonic_sort<<<(modSize + BUFSIZE - 1) / BUFSIZE, BUFSIZE / 2>>>(gpuArr, i, j);
             }
