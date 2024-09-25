@@ -67,31 +67,37 @@ __global__ void bitonic_sort_shared_merge(int *gpuArr, int i, int j) {
     __shared__ int buf[BUFSIZE];
     int idx = threadIdx.x + blockDim.x * blockIdx.x;
     
-    int k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
-    int xor_idx = k ^ (1 << j);
-    
-    int buf_idx = k % BUFSIZE;
-    int buf_xor_idx = xor_idx % BUFSIZE;
-    
-    buf[buf_idx] = gpuArr[k];
-    buf[buf_xor_idx] = gpuArr[xor_idx];
+    int org = j;
+    for (; j >= 0; j--) {
+        int k = (idx / (1 << j)) * (1 << (j + 1)) + (idx % (1 << j));
+        int xor_idx = k ^ (1 << j);
+        
+        int buf_idx = k % BUFSIZE;
+        int buf_xor_idx = xor_idx % BUFSIZE;
+        if (j == org) {
+            buf[buf_idx] = gpuArr[k];
+            buf[buf_xor_idx] = gpuArr[xor_idx];
 
-    __syncthreads();
+            __syncthreads();
+        }    
 
-    if (((1 << i) & k) == 0) {
-        if (buf[buf_idx] > buf[buf_xor_idx]) {
-            int temp = buf[buf_idx];
-            buf[buf_idx] = buf[buf_xor_idx];
-            buf[buf_xor_idx] = temp;
+
+        if (((1 << i) & k) == 0) {
+            if (buf[buf_idx] > buf[buf_xor_idx]) {
+                int temp = buf[buf_idx];
+                buf[buf_idx] = buf[buf_xor_idx];
+                buf[buf_xor_idx] = temp;
+            }
+        } else {
+            if (buf[buf_idx] < buf[buf_xor_idx]) {
+                int temp = buf[buf_idx];
+                buf[buf_idx] = buf[buf_xor_idx];
+                buf[buf_xor_idx] = temp;
+            }
         }
-    } else {
-        if (buf[buf_idx] < buf[buf_xor_idx]) {
-            int temp = buf[buf_idx];
-            buf[buf_idx] = buf[buf_xor_idx];
-            buf[buf_xor_idx] = temp;
-        }
+        __syncthreads();
+
     }
-    __syncthreads();
     
     gpuArr[k] = buf[buf_idx];
     gpuArr[xor_idx] = buf[buf_xor_idx];
