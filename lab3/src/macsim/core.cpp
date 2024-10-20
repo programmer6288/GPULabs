@@ -257,36 +257,30 @@ bool core_c::schedule_warps_rr() {
   return true;
 }
 
-// In core.cpp
 bool core_c::schedule_warps_gto() {
-    // If there are no available warps to run, skip the cycle
     if (c_dispatched_warps.empty()) {
-        return true; // skip cycle
+        return true; 
     }
-
-    // First, check if c_last_selected_warp_id is valid
     if (c_last_selected_warp_id != -1) {
-        // Look for the warp with c_last_selected_warp_id in c_dispatched_warps
-        auto it = std::find_if(c_dispatched_warps.begin(), c_dispatched_warps.end(),
-                               [this](warp_s* warp){ return warp->warp_id == c_last_selected_warp_id; });
-        if (it != c_dispatched_warps.end()) {
-            // Remove warp from c_dispatched_warps and schedule it
-            c_running_warp = *it;
-            c_dispatched_warps.erase(it);
-            return false; // warp scheduled, do not skip cycle
-        } else {
-            // Warp not found, reset c_last_selected_warp_id
-            c_last_selected_warp_id = -1;
+        auto it = c_dispatched_warps.begin();
+        while (it != c_dispatched_warps.end()) {
+            warp_s* warp = *it;
+            if (warp->warp_id == c_last_selected_warp_id) {
+                c_running_warp = warp;
+                c_dispatched_warps.erase(it);
+                return false; 
+            }
+            ++it;
         }
+        c_last_selected_warp_id = -1;
     }
 
-    // If c_last_selected_warp_id is invalid or warp not found, pick the oldest warp
-    // Since the oldest warp is at the front of c_dispatched_warps
+
     c_running_warp = c_dispatched_warps.front();
     c_dispatched_warps.erase(c_dispatched_warps.begin());
     c_last_selected_warp_id = c_running_warp->warp_id;
 
-    return false; // warp scheduled, do not skip cycle
+    return false;
 }
 
 // bool core_c::schedule_warps_gto() {
