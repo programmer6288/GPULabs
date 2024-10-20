@@ -7,11 +7,16 @@
 #include "macsim.h"
 #include "cache.h"
 
+#include <unordered_map>
+
 class macsim;
 class cache_c;
 
 class core_c {
 public:
+  
+  std::unordered_map<warp_s*, sim_time_type> warp_arrival_time;
+  warp_s *last_scheduled_warp = nullptr;
   int ld_req_cnt = 0;                   // Number of load requests
   int st_req_cnt = 0;                   // Number of store requests
   int c_running_block_num = 0;
