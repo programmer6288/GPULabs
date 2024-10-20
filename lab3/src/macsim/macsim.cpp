@@ -370,7 +370,9 @@ void macsim::get_mem_response() {
 
         // Finally insert response in core responses queue
         core_pointers_v[response.core_id]->c_memory_responses.push(response.warp_id);
-        
+            
+        core_pointers_v[response.core_id]->update_suspended_warp_timestamp(response.warp_id, m_cycle);
+
         // erase scoreboard entry
         GPU_scoreboard.erase(entry);
         break;
@@ -560,7 +562,7 @@ int macsim::dispatch_warps(int core_id, Block_Scheduling_Policy_Types policy){
       m_block_schedule_info[block_id]->dispatched_thread_num++;
       
       // TODO: We need to update our timestamp when we dispatch the warp
-
+      warp_to_run->trace_info_ptr->timestamp = m_cycle;
       // We need to initialize VTA entry for the warp (associativity for VTA is defined in macsim.h)
       warp_to_run->trace_info_ptr->ccws_vta_entry = new ccws_vta(CCWS_VTA_ASSOC);
       

@@ -48,7 +48,7 @@ typedef struct warp_s {
   std::queue <trace_info_nvbit_small_s *> trace_buffer;   // Trace buffer
 
   // TODO: We need to have a per-warp timestamp marker
-
+  uint64_t timestamp = 0;
   // VTA entry for warp
   ccws_vta * ccws_vta_entry;
 
