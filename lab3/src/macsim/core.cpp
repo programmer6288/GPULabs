@@ -257,69 +257,101 @@ bool core_c::schedule_warps_rr() {
   return true;
 }
 
+// In core.cpp
 bool core_c::schedule_warps_gto() {
-  // TODO: Implement the GTO logic here
-  /*
-    GTO logic goes here
-  */  
-
-  for (auto warp : c_dispatched_warps) {
-    if (warp_arrival_time.find(warp) == warp_arrival_time.end()) {
-      warp_arrival_time[warp] = c_cycle;
+    // If there are no available warps to run, skip the cycle
+    if (c_dispatched_warps.empty()) {
+        return true; // skip cycle
     }
-  }
-  
-  std::unordered_set<warp_s *> active_warps(c_dispatched_warps.begin(), c_dispatched_warps.end());
-  for (auto& pair : c_suspended_warps) {
-    active_warps.insert(pair.second);
-  }
-  if (c_running_warp) {
-    active_warps.insert(c_running_warp);
-  }
 
-  for (auto it = warp_arrival_time.begin(); it != warp_arrival_time.end(); ) {
-    if (active_warps.find(it->first) == active_warps.end()) {
-      it = warp_arrival_time.erase(it);
-    } else {
-      ++it;
+    // First, check if c_last_selected_warp_id is valid
+    if (c_last_selected_warp_id != -1) {
+        // Look for the warp with c_last_selected_warp_id in c_dispatched_warps
+        auto it = std::find_if(c_dispatched_warps.begin(), c_dispatched_warps.end(),
+                               [this](warp_s* warp){ return warp->warp_id == c_last_selected_warp_id; });
+        if (it != c_dispatched_warps.end()) {
+            // Remove warp from c_dispatched_warps and schedule it
+            c_running_warp = *it;
+            c_dispatched_warps.erase(it);
+            return false; // warp scheduled, do not skip cycle
+        } else {
+            // Warp not found, reset c_last_selected_warp_id
+            c_last_selected_warp_id = -1;
+        }
     }
-  }
 
+    // If c_last_selected_warp_id is invalid or warp not found, pick the oldest warp
+    // Since the oldest warp is at the front of c_dispatched_warps
+    c_running_warp = c_dispatched_warps.front();
+    c_dispatched_warps.erase(c_dispatched_warps.begin());
+    c_last_selected_warp_id = c_running_warp->warp_id;
 
-  if (last_scheduled_warp) {
-    auto it = std::find(c_dispatched_warps.begin(), c_dispatched_warps.end(), last_scheduled_warp);
-    if (it != c_dispatched_warps.end()) {
-      // Schedule the last scheduled warp again
-      c_running_warp = last_scheduled_warp;
-      c_dispatched_warps.erase(it);
-      return false; // Warp scheduled successfully
-    } else {
-      // If the last scheduled warp is not in dispatched warps, check if it's suspended
-      if (c_suspended_warps.find(last_scheduled_warp->warp_id) != c_suspended_warps.end()) {
-        // Warp is suspended; cannot schedule it now
-        // Proceed to schedule the oldest warp
-      } else {
-        // Warp is no longer active (finished execution); reset last_scheduled_warp
-        last_scheduled_warp = nullptr;
-      }
-    }
-  }
-
-  if (!c_dispatched_warps.empty()) {
-    // Find the warp with the earliest arrival time (oldest warp)
-    auto min_warp_iter = std::min_element(c_dispatched_warps.begin(), c_dispatched_warps.end(),
-      [this](warp_s* a, warp_s* b) {
-        return warp_arrival_time[a] < warp_arrival_time[b];
-      });
-    c_running_warp = *min_warp_iter;
-    c_dispatched_warps.erase(min_warp_iter);
-    // Update last_scheduled_warp
-    last_scheduled_warp = c_running_warp;
-    return false; // Warp scheduled successfully
-  }
-
-  return true;
+    return false; // warp scheduled, do not skip cycle
 }
+
+// bool core_c::schedule_warps_gto() {
+//   // TODO: Implement the GTO logic here
+//   /*
+//     GTO logic goes here
+//   */  
+
+//   for (auto warp : c_dispatched_warps) {
+//     if (warp_arrival_time.find(warp) == warp_arrival_time.end()) {
+//       warp_arrival_time[warp] = c_cycle;
+//     }
+//   }
+  
+//   std::unordered_set<warp_s *> active_warps(c_dispatched_warps.begin(), c_dispatched_warps.end());
+//   for (auto& pair : c_suspended_warps) {
+//     active_warps.insert(pair.second);
+//   }
+//   if (c_running_warp) {
+//     active_warps.insert(c_running_warp);
+//   }
+
+//   for (auto it = warp_arrival_time.begin(); it != warp_arrival_time.end(); ) {
+//     if (active_warps.find(it->first) == active_warps.end()) {
+//       it = warp_arrival_time.erase(it);
+//     } else {
+//       ++it;
+//     }
+//   }
+
+
+//   if (last_scheduled_warp) {
+//     auto it = std::find(c_dispatched_warps.begin(), c_dispatched_warps.end(), last_scheduled_warp);
+//     if (it != c_dispatched_warps.end()) {
+//       // Schedule the last scheduled warp again
+//       c_running_warp = last_scheduled_warp;
+//       c_dispatched_warps.erase(it);
+//       return false; // Warp scheduled successfully
+//     } else {
+//       // If the last scheduled warp is not in dispatched warps, check if it's suspended
+//       if (c_suspended_warps.find(last_scheduled_warp->warp_id) != c_suspended_warps.end()) {
+//         // Warp is suspended; cannot schedule it now
+//         // Proceed to schedule the oldest warp
+//       } else {
+//         // Warp is no longer active (finished execution); reset last_scheduled_warp
+//         last_scheduled_warp = nullptr;
+//       }
+//     }
+//   }
+
+//   if (!c_dispatched_warps.empty()) {
+//     // Find the warp with the earliest arrival time (oldest warp)
+//     auto min_warp_iter = std::min_element(c_dispatched_warps.begin(), c_dispatched_warps.end(),
+//       [this](warp_s* a, warp_s* b) {
+//         return warp_arrival_time[a] < warp_arrival_time[b];
+//       });
+//     c_running_warp = *min_warp_iter;
+//     c_dispatched_warps.erase(min_warp_iter);
+//     // Update last_scheduled_warp
+//     last_scheduled_warp = c_running_warp;
+//     return false; // Warp scheduled successfully
+//   }
+
+//   return true;
+// }
 
 
 
