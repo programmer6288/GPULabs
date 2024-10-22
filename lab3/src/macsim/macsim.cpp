@@ -350,7 +350,7 @@ void macsim::get_mem_response() {
           core_pointers_v[entry->core_id]->c_l1cache->insert_cache(entry->addr, &line_addr, &victim_line_addr, 0, false);
 
           //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-          // TODO: Task 2.1b: Insert the tag in warp's VTA entry upon L1 eviction.
+          // TODO: (Done) Task 2.1b: Insert the tag in warp's VTA entry upon L1 eviction.
           // Steps:
           //  - Get tag corresponding to the address. (see if any of the cache class methods can help with this)
           //  - Search for the warp that issued the request in core's (entry->core_id) suspended queue and Insert 
@@ -358,11 +358,16 @@ void macsim::get_mem_response() {
           if(victim_line_addr) {
             // Get the tag from the address
             Addr repl_ln_tag; 
-
+            int set;
+            core_pointers_v[entry->core_id]->c_l1cache->find_tag_and_set(victim_line_addr, &repl_ln_tag, &set);
             // Get the warp pointer from suspended queue of core (use core_id from entry->core_id)
-
-            // Insert the tag into the warp's VTA
-            CCWSLOG(printf("VTA insertion: %llx\n", repl_ln_tag));
+            auto it = core_pointers_v[entry->core_id]->c_suspended_warps.find(entry->warp_id);
+            if (it != core_pointers_v[entry->core_id]->c_suspended_warps.end()) {
+              warp_s *warp = it->second;
+              // Insert the tag into the warp's VTA
+              warp->ccws_vta_entry->insert(repl_ln_tag); 
+              CCWSLOG(printf("VTA insertion: %llx\n", repl_ln_tag));
+            }
 
           }
           //////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -558,7 +563,7 @@ int macsim::dispatch_warps(int core_id, Block_Scheduling_Policy_Types policy){
       warp_to_run->trace_info_ptr = initialize_warp(warp_to_run->warp_id);
       m_block_schedule_info[block_id]->dispatched_thread_num++;
       
-      // TODO: We need to update our timestamp when we dispatch the warp
+      // TODO: (Done) We need to update our timestamp when we dispatch the warp
       warp_to_run->trace_info_ptr->timestamp = m_cycle;
       // We need to initialize VTA entry for the warp (associativity for VTA is defined in macsim.h)
       warp_to_run->trace_info_ptr->ccws_vta_entry = new ccws_vta(CCWS_VTA_ASSOC);

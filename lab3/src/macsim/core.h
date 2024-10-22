@@ -61,6 +61,8 @@ public:
   // Run one cycle
   void run_a_cycle();
 
+  void update_lls_score();
+
 private:
   friend class macsim;
 
