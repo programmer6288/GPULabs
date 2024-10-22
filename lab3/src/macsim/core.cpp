@@ -333,7 +333,7 @@ bool core_c::schedule_warps_ccws() {
     for (auto it = scheduleable_Warps.begin(); it != scheduleable_Warps.end(); ++it) {
       if (std::find(scheduleable_Warps.begin(), scheduleable_Warps.end(), *it) != scheduleable_Warps.end()) {
         c_running_warp = *it;
-        c_dispatched_warps.erase(it);
+        // c_dispatched_warps.erase(it);
         return false;
       }
     }
