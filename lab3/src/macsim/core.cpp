@@ -324,6 +324,7 @@ bool core_c::schedule_warps_ccws() {
     // Copy dispatch queue
     std::vector<warp_s *> dispatch_copy = c_dispatched_warps;
 
+    // printf("dispatch size = %d, cum_cutoff = %d\n", dispatch_copy.size(), cumulative_lls_cutoff);
     // sort the vector by scores (descending order)
     std::sort(dispatch_copy.begin(), dispatch_copy.end(), [] (warp_s *a, warp_s *b) {
       return a->ccws_lls_score > b->ccws_lls_score;
@@ -334,12 +335,13 @@ bool core_c::schedule_warps_ccws() {
     int cum_score = 0;
     for (auto warp : dispatch_copy) {
       cum_score += warp->ccws_lls_score;
-      if (cum_score <= cumulative_lls_cutoff) {
+      // printf("cum_score = %d\n", cum_score);
         scheduleable_Warps.push_back(warp);
-      } else {
-        break;
-      }
+      if (cum_score > cumulative_lls_cutoff) {
+	      break;
+      }     
     }
+
   
     assert(scheduleable_Warps.size() > 0);   // We should always have atleast one schedulable warp
 
