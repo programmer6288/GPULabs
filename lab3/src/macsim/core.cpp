@@ -300,30 +300,43 @@ bool core_c::schedule_warps_ccws() {
     CCWS logic goes here
   */  
 
-  printf("ERROR: CCWS Not Implemented\n");   // TODO: remove this
-  c_retire = true;                          // TODO: remove this
-
-  // TODO: Task 2-4a: determine cumulative LLS cutoff 
-  int cumulative_lls_cutoff = 0; 
+  // TODO: (Done) Task 2-4a: determine cumulative LLS cutoff 
+  int cumulative_lls_cutoff = get_running_warp_num() * CCWS_LLS_BASE_SCORE; 
   
   if (!c_dispatched_warps.empty()) {
-    // TODO: Task 2.4b: Construct schedulable warps set:
+    // TODO: (Done) Task 2.4b: Construct schedulable warps set:
     // - Create a copy of the dispatch queue, and sort it in descending order.
     // - Collect the the warps with highest LLS scores (until we reach the cumulative cutoff) to construct the 
     //   schedulable warps set.
 
     // Copy dispatch queue
-
+    std::vector<warp_s *> dispatch_copy = c_dispatched_warps;
     // sort the vector by scores (descending order)
-
+    std::sort(dispatch_copy.begin(), dispatch_copy.end(), [] (warp_s *a, warp_s *b) {
+      return a->ccws_lls_score > b->ccws_lls_score;
+    });
     // Construct set of scheduleable warps by adding warps till we hit the cumulative threshold
     std::vector<warp_s*> scheduleable_Warps;
-  
+    int cum_score = 0;
+    for (auto warp : dispatch_copy) {
+      cum_score += warp->ccws_lls_score;
+      if (cum_score <= cumulative_lls_cutoff) {
+        scheduleable_Warps.push_back(warp);
+      } else {
+        break;
+      }
+    }
     assert(scheduleable_Warps.size() > 0);   // We should always have atleast one schedulable warp
-
-    // TODO: Task 2.4c: Use Round Robin as baseline scheduling logic to schedule warps from the dispatch queue only if 
+  
+    // TODO: (Done) Task 2.4c: Use Round Robin as baseline scheduling logic to schedule warps from the dispatch queue only if 
     // the warp is present in the scheduleable warps set
-
+    for (auto it = scheduleable_Warps.begin(); it != scheduleable_Warps.end(); ++it) {
+      if (std::find(scheduleable_Warps.begin(), scheduleable_Warps.end(), *it) != scheduleable_Warps.end()) {
+        c_running_warp = *it;
+        c_dispatched_warps.erase(it);
+        return false;
+      }
+    }
   }
 
   return true;
