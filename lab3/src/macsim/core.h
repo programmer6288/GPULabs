@@ -60,9 +60,6 @@ public:
 
   // Run one cycle
   void run_a_cycle();
-  
-  void update_suspended_warp_timestamp(int warp_id, uint64_t timestamp); 
-
 
 private:
   friend class macsim;
