@@ -327,7 +327,7 @@ bool core_c::schedule_warps_ccws() {
       }
     }
     assert(scheduleable_Warps.size() > 0);   // We should always have atleast one schedulable warp
-  
+    printf("scheduleableWarps size = %d\n", scheduleable_Warps.size());
     // TODO: (Done) Task 2.4c: Use Round Robin as baseline scheduling logic to schedule warps from the dispatch queue only if 
     // the warp is present in the scheduleable warps set
     for (auto it = scheduleable_Warps.begin(); it != scheduleable_Warps.end(); ++it) {
