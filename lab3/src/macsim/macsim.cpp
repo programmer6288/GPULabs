@@ -370,9 +370,6 @@ void macsim::get_mem_response() {
 
         // Finally insert response in core responses queue
         core_pointers_v[response.core_id]->c_memory_responses.push(response.warp_id);
-            
-        core_pointers_v[response.core_id]->update_suspended_warp_timestamp(response.warp_id, m_cycle);
-
         // erase scoreboard entry
         GPU_scoreboard.erase(entry);
         break;

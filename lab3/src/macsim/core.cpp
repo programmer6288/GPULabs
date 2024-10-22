@@ -263,21 +263,21 @@ bool core_c::schedule_warps_gto() {
     return true; // skip cycle
   }
 
-  // First, check if the last scheduled warp is still in the dispatch queue
+  
   if (c_last_selected_warp_id != -1) {
-    auto it = std::find_if(c_dispatched_warps.begin(), c_dispatched_warps.end(),
-                           [this](warp_s* warp){ return warp->warp_id == c_last_selected_warp_id; });
-    if (it != c_dispatched_warps.end()) {
-      // Remove warp from c_dispatched_warps and schedule it
-      c_running_warp = *it;
-      c_dispatched_warps.erase(it);
-      // Do not update the timestamp
-      return false; // warp scheduled, do not skip cycle
-    } else {
-      // Warp not found, reset c_last_selected_warp_id
-      c_last_selected_warp_id = -1;
+    auto it = c_dispatched_warps.begin();
+    while (it != c_dispatched_warps.end()) {
+        warp_s* warp = *it;
+        if (warp->warp_id == c_last_selected_warp_id) {
+            c_running_warp = warp;
+            c_dispatched_warps.erase(it);
+            return false; 
+        }
+        ++it;
     }
+    c_last_selected_warp_id = -1;
   }
+
 
   // If last scheduled warp is not available, find the oldest warp based on timestamp
   auto oldest_it = std::min_element(c_dispatched_warps.begin(), c_dispatched_warps.end(),
@@ -288,12 +288,10 @@ bool core_c::schedule_warps_gto() {
     c_running_warp = *oldest_it;
     c_dispatched_warps.erase(oldest_it);
     c_last_selected_warp_id = c_running_warp->warp_id;
-    // Do not reset the timestamp
-    return false; // warp scheduled, do not skip cycle
+    return false;   
   }
 
-  // No warp scheduled
-  return true; // skip cycle
+  return true; 
 }
 
 
