@@ -345,7 +345,7 @@ bool core_c::schedule_warps_ccws() {
 
     // TODO: (Done) Task 2.4c: Use Round Robin as baseline scheduling logic to schedule warps from the dispatch queue only if 
     // the warp is present in the scheduleable warps set
-    for (auto it = scheduleable_Warps.begin(); it != scheduleable_Warps.end(); ++it) {
+    for (auto it = c_dispatched_warps.begin(); it != c_dispatched_warps.end(); ++it) {
       if (std::find(scheduleable_Warps.begin(), scheduleable_Warps.end(), *it) != scheduleable_Warps.end()) {
         c_running_warp = *it;
         c_dispatched_warps.erase(it);
